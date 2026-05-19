@@ -19,7 +19,7 @@ def build_callbacks(cfg: DictConfig):
     callbacks = [
         LearningRateMonitor(logging_interval="step"),
         ModelCheckpoint(
-            filename="best-{epoch}-{val_acc:.3f}",
+            filename="best",
             monitor="val_acc",
             mode="max",
             save_top_k=1,
