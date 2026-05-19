@@ -1,27 +1,29 @@
 model:
   name: "resnet18"
-  num_classes: 10
-
-trainer:
-  lr:
-  wd:
-  wd_on_conv: 
-  alpha:  # orth parameter
-  beta:  # l1 gamma parameter
-  epochs: 
-  ckpt_path: 
-  warmup_fraction: 
-  seed: 
-  resume: 
+  num_classes: 10   # переопределится автоматически по датасету, оставлено для справки
 
 data:
   dataset: "cifar100"
   batch_size: 128
-  num_workers: 
-  heigth:
-  width:
-  data_path:
+  num_workers: 4
+  data_path: "./data"
+  val_split: 0.2
 
+# Настройки MLflow
+experiment_name: "cifar_resnet"
+tracking_uri: null     # null = локальная папка mlruns
 
-prune:
-  gamma:  # pruning parameter
+trainer:
+  lr: 1e-3
+  wd: 5e-4
+  wd_on_conv: 0    # Если null, используется trainer.wd; иначе задайте число (напр., 5e-3)
+  alpha: 1e-1          # orthogonal loss coefficient
+  beta: 1e-4           # BN gamma L1 coefficient
+  epochs: 10
+  warmup_fraction: 0.1
+  seed: 42
+  ckpt_path: null      # путь до чекпоинта для возобновления обучения
+  resume: false        # не используется напрямую, вместо него ckpt_path
+  patience: 20
+  lr_finder: false     # включить автоматический поиск lr
+  devices: 1
