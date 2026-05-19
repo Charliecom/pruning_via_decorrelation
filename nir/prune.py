@@ -50,7 +50,6 @@ def prune_model(
     pruning_ratio: float,
     importance: tp.importance.Importance,
     device: torch.device,
-    ignored_layers: list = None,
 ):
     """Прунит модель и возвращает (pruned_model, cr_flops, cr_params)."""
     new_model = copy.deepcopy(model)
@@ -58,16 +57,13 @@ def prune_model(
 
     base_flops, base_params = tp.utils.count_ops_and_params(model, example_inputs)
 
-    if ignored_layers is None:
-        ignored_layers = []
-
     pruner = tp.pruner.BasePruner(
         model=new_model,
         example_inputs=example_inputs,
         importance=importance,
         pruning_ratio=pruning_ratio,
         global_pruning=True,
-        ignored_layers=ignored_layers,
+        ignored_layers=[new_model.fc, new_model.conv1],
         round_to=8,
     )
     pruner.step()
@@ -78,16 +74,6 @@ def prune_model(
     cr_params = base_params / params if params > 0 else float("inf")
 
     return new_model, cr_flops, cr_params
-
-
-def prepare_ignored_layers(model: nn.Module, model_name: str):
-    """Возвращает список слоёв, которые нельзя прунить."""
-    ignored = []
-    if hasattr(model, "fc"):
-        ignored.append(model.fc)
-    if hasattr(model, "conv1"):
-        ignored.append(model.conv1)
-    return ignored
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
@@ -172,7 +158,6 @@ def main(cfg: DictConfig):
     test_loader = dm.test_dataloader()
 
     importance = get_importance(prune_cfg.importance)
-    ignored_layers = prepare_ignored_layers(model, cfg.model.name)
     ratios = prune_cfg.pruning_ratios
 
     results = []
@@ -193,7 +178,7 @@ def main(cfg: DictConfig):
         for ratio in ratios:
             print(f"\nPruning with ratio {ratio:.2f}...")
             pruned_model, cr_flops, cr_params = prune_model(
-                model, ratio, importance, device, ignored_layers
+                model, ratio, importance, device
             )
             acc = evaluate(pruned_model, test_loader, device)
             print(

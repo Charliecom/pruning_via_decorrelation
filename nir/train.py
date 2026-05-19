@@ -51,6 +51,12 @@ def build_callbacks(cfg: DictConfig):
 @hydra.main(version_base=None, config_path="../conf", config_name="config")
 def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
+    # --- MLflow Logger ---
+    mlflow_logger = MLFlowLogger(
+        experiment_name=cfg.get("experiment_name", "cifar_experiment"),
+        tracking_uri=cfg.get("tracking_uri", None),
+    )
+    mlflow_logger.log_hyperparams(OmegaConf.to_container(cfg, resolve=True))
     fix_seed(cfg.trainer.seed)
 
     # --- Данные ---
@@ -83,13 +89,6 @@ def main(cfg: DictConfig):
         weight_decay_conv=wd_conv,
         warmup_fraction=cfg.trainer.get("warmup_fraction", 0.1),
     )
-
-    # --- MLflow Logger ---
-    mlflow_logger = MLFlowLogger(
-        experiment_name=cfg.get("experiment_name", "cifar_experiment"),
-        tracking_uri=cfg.get("tracking_uri", None),
-    )
-    mlflow_logger.log_hyperparams(OmegaConf.to_container(cfg, resolve=True))
 
     # --- Коллбэки ---
     callbacks = build_callbacks(cfg)

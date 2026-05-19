@@ -27,6 +27,7 @@ trainer:
   patience: 20
   lr_finder: false     # включить автоматический поиск lr
   devices: 1
+  early_stopping: false
 
 prune:
   run_id: null                # явный run_id или null (тогда последний в эксперименте)

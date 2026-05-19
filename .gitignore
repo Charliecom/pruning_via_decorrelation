@@ -11,3 +11,4 @@ wheels/
 mlruns/
 outputs/
 data/
+nir/test.ipynb
