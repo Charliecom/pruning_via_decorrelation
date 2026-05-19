@@ -3,14 +3,14 @@ model:
   num_classes: 10   # переопределится автоматически по датасету, оставлено для справки
 
 data:
-  dataset: "cifar100"
+  dataset: "svhn"
   batch_size: 128
   num_workers: 4
   data_path: "./data"
   val_split: 0.2
 
 # Настройки MLflow
-experiment_name: "cifar_resnet"
+experiment_name: "svhn_resnet"
 tracking_uri: null     # null = локальная папка mlruns
 
 trainer:
@@ -31,12 +31,12 @@ trainer:
 
 prune:
   run_id: null                # явный run_id или null (тогда последний в эксперименте)
-  experiment_name: "cifar_resnet"
+  experiment_name: "svhn_resnet"
   ckpt_name: "best"          # имя артефакта чекпоинта (best-...ckpt или last.ckpt)
   importance: "bnscale"           # критерий важности (поддерживается torch_pruning)
   pruning_ratios: [0.1, 0.2, 0.3, 0.4, 0.5]
   # для тестового даталоадера
-  dataset: "cifar100"
+  dataset: "svhn"
   batch_size: 128
   num_workers: 4
   data_path: "./data"
