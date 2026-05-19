@@ -1,6 +1,6 @@
-import os
 import copy
 from pathlib import Path
+import tempfile
 
 import hydra
 import mlflow
@@ -115,46 +115,47 @@ def main(cfg: DictConfig):
     else:
         print(f"Using provided run_id: {run_id}")
 
+    # Получаем путь к директории run через artifact_uri
     run_info = client.get_run(run_id)
     artifact_uri = run_info.info.artifact_uri
 
     if artifact_uri.startswith("file://"):
-        run_dir = artifact_uri[7:]
+        artifact_path = Path(artifact_uri[7:])
     else:
-        run_dir = artifact_uri
+        artifact_path = Path(artifact_uri)
 
-    run_dir = Path(run_dir)
-    run_dir = run_dir.parent
-
+    # В структуре mlruns чекпоинты лежат в родительской директории от artifacts
+    run_dir = artifact_path.parent
     print(f"Run directory: {run_dir}")
 
-    checkpoints_dir = os.path.join(run_dir, "checkpoints")
-    if not os.path.exists(checkpoints_dir):
+    checkpoints_dir = run_dir / "checkpoints"
+    if not checkpoints_dir.exists():
         raise FileNotFoundError(f"Checkpoints directory not found: {checkpoints_dir}")
 
     ckpt_name = prune_cfg.ckpt_name
-    ckpt_files = [f for f in os.listdir(checkpoints_dir) if f.endswith(".ckpt")]
-    print(f"Available checkpoints: {ckpt_files}")
+    ckpt_files = list(checkpoints_dir.glob("*.ckpt"))
+    print(f"Available checkpoints: {[f.name for f in ckpt_files]}")
 
     local_path = None
     for ckpt_file in ckpt_files:
-        if ckpt_name in ckpt_file:
-            local_path = os.path.join(checkpoints_dir, ckpt_file)
+        if ckpt_name in ckpt_file.name:
+            local_path = ckpt_file
             break
 
     if local_path is None:
-        if os.path.exists(os.path.join(checkpoints_dir, "last.ckpt")):
-            local_path = os.path.join(checkpoints_dir, "last.ckpt")
+        fallback_path = checkpoints_dir / "last.ckpt"
+        if fallback_path.exists():
+            local_path = fallback_path
             print("Using last.ckpt as fallback")
         else:
             raise FileNotFoundError(
                 f"Checkpoint containing '{ckpt_name}' not found in {checkpoints_dir}. "
-                f"Available: {ckpt_files}"
+                f"Available: {[f.name for f in ckpt_files]}"
             )
 
     print(f"Loading checkpoint: {local_path}")
 
-    lit_model = LightningCIFARClassifier.load_from_checkpoint(local_path)
+    lit_model = LightningCIFARClassifier.load_from_checkpoint(str(local_path))
     model = lit_model.model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -207,8 +208,10 @@ def main(cfg: DictConfig):
                 }
             )
 
+    # Сохраняем результаты во временную директорию
+    tmp_dir = Path(tempfile.mkdtemp())
     df = pd.DataFrame(results)
-    csv_path = "pruning_results.csv"
+    csv_path = tmp_dir / "pruning_results.csv"
     df.to_csv(csv_path, index=False)
     print(f"\nResults:\n{df}")
 
@@ -232,13 +235,14 @@ def main(cfg: DictConfig):
     ax2.legend()
 
     plt.tight_layout()
-    plot_path = "pruning_analysis.png"
+    plot_path = tmp_dir / "pruning_analysis.png"
     plt.savefig(plot_path, dpi=100, bbox_inches="tight")
     plt.close()
 
+    # Логируем артефакты в MLflow
     with mlflow.start_run(run_id=run_id):
-        mlflow.log_artifact(csv_path, artifact_path="pruning")
-        mlflow.log_artifact(plot_path, artifact_path="pruning")
+        mlflow.log_artifact(str(csv_path), artifact_path="pruning")
+        mlflow.log_artifact(str(plot_path), artifact_path="pruning")
         mlflow.log_params(
             {
                 "prune_importance": prune_cfg.importance,
@@ -247,8 +251,10 @@ def main(cfg: DictConfig):
         )
         print(f"Artifacts logged to run {run_id}")
 
-    os.remove(csv_path)
-    os.remove(plot_path)
+    # Очистка временной директории
+    import shutil
+
+    shutil.rmtree(tmp_dir)
 
 
 if __name__ == "__main__":
