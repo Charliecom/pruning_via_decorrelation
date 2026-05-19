@@ -1,0 +1,27 @@
+model:
+  name: "resnet18"
+  num_classes: 10
+
+trainer:
+  lr:
+  wd:
+  wd_on_conv: 
+  alpha:  # orth parameter
+  beta:  # l1 gamma parameter
+  epochs: 
+  ckpt_path: 
+  warmup_fraction: 
+  seed: 
+  resume: 
+
+data:
+  dataset: "cifar100"
+  batch_size: 128
+  num_workers: 
+  heigth:
+  width:
+  data_path:
+
+
+prune:
+  gamma:  # pruning parameter
