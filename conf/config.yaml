@@ -19,8 +19,8 @@ trainer:
   wd_on_conv: null    # Если null, используется trainer.wd; иначе задайте число (напр., 5e-3)
   alpha: 0          # orthogonal loss coefficient
   beta: 5e-4           # BN gamma L1 coefficient
-  epochs: 200
-  warmup_fraction: 0.1
+  epochs: 30
+  warmup_fraction: 0.2
   seed: 42
   ckpt_path: null      # путь до чекпоинта для возобновления обучения
   resume: false        # не используется напрямую, вместо него ckpt_path

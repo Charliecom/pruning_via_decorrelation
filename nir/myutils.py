@@ -50,7 +50,6 @@ def build_transform(dataset_name: str, train: bool = True):
             transform = transforms.Compose(
                 [
                     transforms.RandomCrop(32, padding=4),
-                    transforms.TrivialAugmentWide(),
                     transforms.ToTensor(),
                     transforms.Normalize(mean, std),
                 ]
